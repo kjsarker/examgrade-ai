@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDropzone } from 'react-dropzone'
-import { DifficultyMode, AIProvider } from '@/types'
+import { DifficultyMode } from '@/types'
 import { formatBytes } from '@/lib/utils'
 
 interface UploadedFile {
@@ -12,40 +12,26 @@ interface UploadedFile {
   status: 'uploading' | 'done' | 'error'
   uploadId?: string
   studentName?: string
-  studentId?: string
 }
 
 export default function UploadPage() {
   const router = useRouter()
   const [title, setTitle] = useState('')
   const [difficulty, setDifficulty] = useState<DifficultyMode>('medium')
-  const [aiProvider, setAiProvider] = useState<AIProvider>('openai')
   const [questionPaper, setQuestionPaper] = useState<UploadedFile | null>(null)
   const [sampleAnswer, setSampleAnswer] = useState<UploadedFile | null>(null)
   const [studentScripts, setStudentScripts] = useState<UploadedFile[]>([])
   const [isGrading, setIsGrading] = useState(false)
-  const [gradingProgress, setGradingProgress] = useState('')
   const [error, setError] = useState('')
 
-  const uploadFile = async (
-    file: File,
-    uploadType: string,
-    studentName?: string,
-    studentId?: string
-  ): Promise<string> => {
+  const uploadFile = async (file: File, uploadType: string, studentName?: string): Promise<string> => {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('uploadType', uploadType)
     if (studentName) formData.append('studentName', studentName)
-    if (studentId) formData.append('studentId', studentId)
-
     const res = await fetch('/api/upload', { method: 'POST', body: formData })
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error || 'Upload failed')
-    }
-    const { upload } = await res.json()
-    return upload.id
+    if (!res.ok) throw new Error((await res.json()).error || 'Upload failed')
+    return (await res.json()).upload.id
   }
 
   const handleQuestionDrop = useCallback(async (files: File[]) => {
@@ -55,9 +41,7 @@ export default function UploadPage() {
     try {
       const uploadId = await uploadFile(files[0], 'question_paper')
       setQuestionPaper({ ...entry, status: 'done', uploadId })
-    } catch {
-      setQuestionPaper({ ...entry, status: 'error' })
-    }
+    } catch { setQuestionPaper({ ...entry, status: 'error' }) }
   }, [])
 
   const handleAnswerDrop = useCallback(async (files: File[]) => {
@@ -67,9 +51,7 @@ export default function UploadPage() {
     try {
       const uploadId = await uploadFile(files[0], 'sample_answer')
       setSampleAnswer({ ...entry, status: 'done', uploadId })
-    } catch {
-      setSampleAnswer({ ...entry, status: 'error' })
-    }
+    } catch { setSampleAnswer({ ...entry, status: 'error' }) }
   }, [])
 
   const handleScriptsDrop = useCallback(async (files: File[]) => {
@@ -80,28 +62,21 @@ export default function UploadPage() {
       studentName: f.name.replace(/\.[^.]+$/, ''),
     }))
     setStudentScripts((prev) => [...prev, ...newEntries])
-
     for (const entry of newEntries) {
       try {
         const uploadId = await uploadFile(entry.file, 'student_script', entry.studentName)
-        setStudentScripts((prev) =>
-          prev.map((s) => (s.id === entry.id ? { ...s, status: 'done', uploadId } : s))
-        )
+        setStudentScripts((prev) => prev.map((s) => s.id === entry.id ? { ...s, status: 'done', uploadId } : s))
       } catch {
-        setStudentScripts((prev) =>
-          prev.map((s) => (s.id === entry.id ? { ...s, status: 'error' } : s))
-        )
+        setStudentScripts((prev) => prev.map((s) => s.id === entry.id ? { ...s, status: 'error' } : s))
       }
     }
   }, [])
 
-  const updateStudentName = (id: string, name: string) => {
-    setStudentScripts((prev) => prev.map((s) => (s.id === id ? { ...s, studentName: name } : s)))
-  }
+  const updateStudentName = (id: string, name: string) =>
+    setStudentScripts((prev) => prev.map((s) => s.id === id ? { ...s, studentName: name } : s))
 
-  const removeScript = (id: string) => {
+  const removeScript = (id: string) =>
     setStudentScripts((prev) => prev.filter((s) => s.id !== id))
-  }
 
   const handleStartGrading = async () => {
     if (!questionPaper?.uploadId || !sampleAnswer?.uploadId) {
@@ -113,11 +88,8 @@ export default function UploadPage() {
       setError('Please upload at least one student script.')
       return
     }
-
     setIsGrading(true)
     setError('')
-    setGradingProgress(`Grading ${readyScripts.length} papers...`)
-
     try {
       const res = await fetch('/api/grading/start', {
         method: 'POST',
@@ -125,65 +97,42 @@ export default function UploadPage() {
         body: JSON.stringify({
           title: title || `Grading Job — ${new Date().toLocaleDateString()}`,
           difficultyMode: difficulty,
-          aiProvider,
           questionPaperId: questionPaper.uploadId,
           sampleAnswerId: sampleAnswer.uploadId,
           studentScriptIds: readyScripts.map((s) => s.uploadId!),
         }),
       })
-
       const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Grading failed')
-      }
-
+      if (!res.ok) throw new Error(data.error || 'Grading failed')
       router.push(`/dashboard/jobs/${data.jobId}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Grading failed')
       setIsGrading(false)
-      setGradingProgress('')
     }
   }
 
-  const DropZone = ({
-    onDrop,
-    label,
-    accept = { 'application/pdf': ['.pdf'], 'image/*': ['.jpg', '.jpeg', '.png'] },
-    multiple = false,
-    file,
-    files,
-  }: {
+  const statusIcon = (s: string) => s === 'uploading' ? '⏳' : s === 'done' ? '✓' : '✗'
+
+  const DropZone = ({ onDrop, label, multiple = false, file, files }: {
     onDrop: (f: File[]) => void
     label: string
-    accept?: Record<string, string[]>
     multiple?: boolean
     file?: UploadedFile | null
     files?: UploadedFile[]
   }) => {
+    const accept = { 'application/pdf': ['.pdf'], 'image/*': ['.jpg', '.jpeg', '.png'], 'text/plain': ['.txt'] }
     const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept, multiple })
-    const statusIcon = (s: string) => s === 'uploading' ? '⏳' : s === 'done' ? '✓' : '✗'
-
     return (
       <div>
-        <div
-          {...getRootProps()}
-          className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-            isDragActive ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-400'
-          }`}
-        >
+        <div {...getRootProps()} className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors ${isDragActive ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-400'}`}>
           <input {...getInputProps()} />
           <p className="text-sm text-gray-500">
-            {isDragActive ? 'Drop here…' : (
-              <><span className="text-gray-900 font-medium">Click to upload</span> or drag & drop</>
-            )}
+            {isDragActive ? 'Drop here…' : <><span className="text-gray-900 font-medium">Click to upload</span> or drag & drop</>}
           </p>
           <p className="text-xs text-gray-400 mt-1">{label}</p>
         </div>
         {file && (
-          <div className={`mt-2 flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${
-            file.status === 'done' ? 'bg-green-50 text-green-700' :
-            file.status === 'error' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-500'
-          }`}>
+          <div className={`mt-2 flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${file.status === 'done' ? 'bg-green-50 text-green-700' : file.status === 'error' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-500'}`}>
             <span>{statusIcon(file.status)}</span>
             <span className="truncate">{file.file.name}</span>
             <span className="ml-auto text-gray-400">{formatBytes(file.file.size)}</span>
@@ -193,7 +142,7 @@ export default function UploadPage() {
           <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto">
             {files.map((s) => (
               <div key={s.id} className="flex items-center gap-2 text-xs bg-gray-50 rounded-lg px-3 py-2">
-                <span>{statusIcon(s.status)}</span>
+                <span className={s.status === 'done' ? 'text-green-500' : s.status === 'error' ? 'text-red-500' : 'text-gray-400'}>{statusIcon(s.status)}</span>
                 <input
                   value={s.studentName || ''}
                   onChange={(e) => updateStudentName(s.id, e.target.value)}
@@ -210,132 +159,75 @@ export default function UploadPage() {
     )
   }
 
-  const difficultyOptions: { value: DifficultyMode; label: string; desc: string }[] = [
-    { value: 'easy', label: 'Easy', desc: 'Lenient, generous partial credit' },
-    { value: 'medium', label: 'Medium', desc: 'Balanced standard grading' },
-    { value: 'hard', label: 'Hard', desc: 'Strict, minimal partial credit' },
+  const difficultyOptions = [
+    { value: 'easy' as DifficultyMode, label: 'Easy', desc: 'Lenient grading' },
+    { value: 'medium' as DifficultyMode, label: 'Medium', desc: 'Balanced grading' },
+    { value: 'hard' as DifficultyMode, label: 'Hard', desc: 'Strict grading' },
   ]
 
-  const providerOptions: { value: AIProvider; label: string; model: string; icon: string }[] = [
-    { value: 'openai', label: 'OpenAI', model: 'GPT-4o', icon: '🟢' },
-    { value: 'anthropic', label: 'Claude', model: 'Opus 4.5', icon: '🟣' },
-    { value: 'gemini', label: 'Gemini', model: '1.5 Pro', icon: '🔵' },
-  ]
+  const readyCount = studentScripts.filter((s) => s.status === 'done').length
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">New Grading Job</h1>
-        <p className="text-sm text-gray-500 mt-1">Upload your exam materials and start AI grading</p>
+        <p className="text-sm text-gray-500 mt-1">Upload exam materials and start AI grading</p>
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100">
-          {error}
-        </div>
+        <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100">{error}</div>
       )}
 
       <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-        {/* Job title */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Job title</label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-            placeholder="e.g. CS101 Midterm Exam May 2026"
+            placeholder="e.g. CS101 Midterm — May 2026"
           />
         </div>
 
-        {/* Difficulty */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Grading mode</label>
           <div className="grid grid-cols-3 gap-2">
             {difficultyOptions.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setDifficulty(opt.value)}
-                className={`p-3 rounded-xl border text-left transition-colors ${
-                  difficulty === opt.value
-                    ? 'border-gray-900 bg-gray-900 text-white'
-                    : 'border-gray-200 hover:border-gray-400'
-                }`}
-              >
+              <button key={opt.value} onClick={() => setDifficulty(opt.value)}
+                className={`p-3 rounded-xl border text-left transition-colors ${difficulty === opt.value ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 hover:border-gray-400'}`}>
                 <p className="text-sm font-medium">{opt.label}</p>
-                <p className={`text-xs mt-0.5 ${difficulty === opt.value ? 'text-gray-400' : 'text-gray-400'}`}>
-                  {opt.desc}
-                </p>
+                <p className={`text-xs mt-0.5 ${difficulty === opt.value ? 'text-gray-400' : 'text-gray-400'}`}>{opt.desc}</p>
               </button>
             ))}
           </div>
         </div>
 
-        {/* AI Provider */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">AI provider</label>
-          <div className="grid grid-cols-3 gap-2">
-            {providerOptions.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setAiProvider(opt.value)}
-                className={`p-3 rounded-xl border text-left transition-colors ${
-                  aiProvider === opt.value
-                    ? 'border-gray-900 bg-gray-900 text-white'
-                    : 'border-gray-200 hover:border-gray-400'
-                }`}
-              >
-                <span className="text-base">{opt.icon}</span>
-                <p className="text-sm font-medium mt-1">{opt.label}</p>
-                <p className={`text-xs mt-0.5 ${aiProvider === opt.value ? 'text-gray-400' : 'text-gray-400'}`}>
-                  {opt.model}
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Question paper */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Question paper</label>
-          <DropZone onDrop={handleQuestionDrop} label="PDF or image" file={questionPaper} />
+          <DropZone onDrop={handleQuestionDrop} label="PDF, image, or text file" file={questionPaper} />
         </div>
 
-        {/* Sample answer */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Sample answer / rubric</label>
-          <DropZone onDrop={handleAnswerDrop} label="PDF or image" file={sampleAnswer} />
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Sample answer / marking rubric</label>
+          <DropZone onDrop={handleAnswerDrop} label="PDF, image, or text file" file={sampleAnswer} />
         </div>
 
-        {/* Student scripts */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Student answer scripts
-            {studentScripts.length > 0 && (
-              <span className="ml-2 text-xs font-normal text-gray-400">{studentScripts.length} uploaded</span>
-            )}
+            {readyCount > 0 && <span className="ml-2 text-xs font-normal text-gray-400">{readyCount} ready</span>}
           </label>
-          <DropZone
-            onDrop={handleScriptsDrop}
-            label="Multiple PDFs or images supported"
-            multiple
-            files={studentScripts}
-          />
+          <DropZone onDrop={handleScriptsDrop} label="Multiple files supported — PDF, image, or text" multiple files={studentScripts} />
         </div>
       </div>
 
       <button
         onClick={handleStartGrading}
-        disabled={isGrading || !questionPaper?.uploadId || !sampleAnswer?.uploadId || studentScripts.filter(s=>s.status==='done').length === 0}
+        disabled={isGrading || !questionPaper?.uploadId || !sampleAnswer?.uploadId || readyCount === 0}
         className="w-full bg-gray-900 text-white py-3 rounded-xl font-medium hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {isGrading ? gradingProgress || 'Grading in progress...' : `Start Grading (${studentScripts.filter(s=>s.status==='done').length} papers)`}
+        {isGrading ? 'Grading in progress… this may take a few minutes' : `Start Grading${readyCount > 0 ? ` (${readyCount} papers)` : ''}`}
       </button>
-
-      {isGrading && (
-        <div className="text-center text-sm text-gray-500">
-          This may take a few minutes. You&apos;ll receive an email when done.
-        </div>
-      )}
     </div>
   )
 }
