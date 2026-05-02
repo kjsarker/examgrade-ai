@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "src/app/api/grading/start/route.ts": {
+      "maxDuration": 300
+    }
+  }
+}
