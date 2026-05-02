@@ -2,9 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/server'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
+let _stripe: Stripe | null = null
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key || key.includes('placeholder')) return null
+  if (!_stripe) _stripe = new Stripe(key, { apiVersion: '2026-04-22.dahlia' })
+  return _stripe
+}
 
 export async function POST(request: NextRequest) {
+  const stripe = getStripe()
+  if (!stripe) {
+    return NextResponse.json({ error: 'Payments are not configured yet. Please contact support to upgrade your plan.' }, { status: 503 })
+  }
+
   const supabase = await createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -15,6 +26,10 @@ export async function POST(request: NextRequest) {
     ? process.env.STRIPE_PRO_PRICE_ID!
     : process.env.STRIPE_PREMIUM_PRICE_ID!
 
+  if (!priceId || priceId.includes('placeholder')) {
+    return NextResponse.json({ error: 'Plan pricing is not configured. Please contact support.' }, { status: 503 })
+  }
+
   const { data: profile } = await supabase
     .from('users')
     .select('stripe_customer_id, email')
@@ -24,7 +39,7 @@ export async function POST(request: NextRequest) {
   let customerId = profile?.stripe_customer_id
 
   if (!customerId) {
-    const customer = await stripe.customers.create({
+    const customer = await stripe!.customers.create({
       email: user.email!,
       metadata: { supabase_user_id: user.id },
     })
@@ -35,7 +50,7 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await stripe!.checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],

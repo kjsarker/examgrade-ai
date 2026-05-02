@@ -12,6 +12,7 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
   const [plan, setPlan] = useState('free')
   const [checkoutLoading, setCheckoutLoading] = useState('')
+  const [upgradeError, setUpgradeError] = useState('')
 
   useEffect(() => {
     fetch('/api/settings?mode=' + activeMode)
@@ -49,13 +50,24 @@ export default function SettingsPage() {
 
   const handleUpgrade = async (targetPlan: 'pro' | 'premium') => {
     setCheckoutLoading(targetPlan)
-    const res = await fetch('/api/stripe/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan: targetPlan }),
-    })
-    const { url } = await res.json()
-    if (url) window.location.href = url
+    setUpgradeError('')
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: targetPlan }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setUpgradeError(data.error || 'Upgrade failed. Please try again.')
+      } else if (data.url) {
+        window.location.href = data.url
+      } else {
+        setUpgradeError('Could not start checkout. Please try again.')
+      }
+    } catch {
+      setUpgradeError('Network error. Please try again.')
+    }
     setCheckoutLoading('')
   }
 
@@ -114,6 +126,9 @@ export default function SettingsPage() {
 
       {/* Billing */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+        {upgradeError && (
+          <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100">{upgradeError}</div>
+        )}
         <div>
           <h2 className="font-semibold text-gray-900">Billing & Plan</h2>
           <p className="text-sm text-gray-500 mt-0.5">
