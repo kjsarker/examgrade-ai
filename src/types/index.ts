@@ -2,6 +2,7 @@ export type Plan = 'free' | 'pro' | 'premium'
 export type DifficultyMode = 'easy' | 'medium' | 'hard'
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed'
 export type UploadType = 'question_paper' | 'sample_answer' | 'student_script'
+export type AIProvider = 'openai' | 'anthropic' | 'gemini'
 
 export interface UserProfile {
   id: string

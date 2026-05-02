@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDropzone } from 'react-dropzone'
-import { DifficultyMode } from '@/types'
+import { DifficultyMode, AIProvider } from '@/types'
 import { formatBytes } from '@/lib/utils'
 
 interface UploadedFile {
@@ -19,6 +19,7 @@ export default function UploadPage() {
   const router = useRouter()
   const [title, setTitle] = useState('')
   const [difficulty, setDifficulty] = useState<DifficultyMode>('medium')
+  const [aiProvider, setAiProvider] = useState<AIProvider>('openai')
   const [questionPaper, setQuestionPaper] = useState<UploadedFile | null>(null)
   const [sampleAnswer, setSampleAnswer] = useState<UploadedFile | null>(null)
   const [studentScripts, setStudentScripts] = useState<UploadedFile[]>([])
@@ -124,6 +125,7 @@ export default function UploadPage() {
         body: JSON.stringify({
           title: title || `Grading Job — ${new Date().toLocaleDateString()}`,
           difficultyMode: difficulty,
+          aiProvider,
           questionPaperId: questionPaper.uploadId,
           sampleAnswerId: sampleAnswer.uploadId,
           studentScriptIds: readyScripts.map((s) => s.uploadId!),
@@ -214,6 +216,12 @@ export default function UploadPage() {
     { value: 'hard', label: 'Hard', desc: 'Strict, minimal partial credit' },
   ]
 
+  const providerOptions: { value: AIProvider; label: string; model: string; icon: string }[] = [
+    { value: 'openai', label: 'OpenAI', model: 'GPT-4o', icon: '🟢' },
+    { value: 'anthropic', label: 'Claude', model: 'Opus 4.5', icon: '🟣' },
+    { value: 'gemini', label: 'Gemini', model: '1.5 Pro', icon: '🔵' },
+  ]
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -256,6 +264,30 @@ export default function UploadPage() {
                 <p className="text-sm font-medium">{opt.label}</p>
                 <p className={`text-xs mt-0.5 ${difficulty === opt.value ? 'text-gray-400' : 'text-gray-400'}`}>
                   {opt.desc}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* AI Provider */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">AI provider</label>
+          <div className="grid grid-cols-3 gap-2">
+            {providerOptions.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setAiProvider(opt.value)}
+                className={`p-3 rounded-xl border text-left transition-colors ${
+                  aiProvider === opt.value
+                    ? 'border-gray-900 bg-gray-900 text-white'
+                    : 'border-gray-200 hover:border-gray-400'
+                }`}
+              >
+                <span className="text-base">{opt.icon}</span>
+                <p className="text-sm font-medium mt-1">{opt.label}</p>
+                <p className={`text-xs mt-0.5 ${aiProvider === opt.value ? 'text-gray-400' : 'text-gray-400'}`}>
+                  {opt.model}
                 </p>
               </button>
             ))}

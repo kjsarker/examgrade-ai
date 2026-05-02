@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
-import { DifficultyMode } from '@/types'
-import { gradeStudentPaper } from '@/services/claude'
+import { DifficultyMode, AIProvider } from '@/types'
+import { gradeStudentPaper } from '@/services/ai'
 import { generateCSV } from '@/services/csv'
 import { generatePDFReport } from '@/services/pdf'
 import { sendGradingCompleteEmail } from '@/services/email'
@@ -25,12 +25,14 @@ export async function POST(request: NextRequest) {
       questionPaperId,
       sampleAnswerId,
       studentScriptIds,
+      aiProvider,
     } = body as {
       title: string
       difficultyMode: DifficultyMode
       questionPaperId: string
       sampleAnswerId: string
       studentScriptIds: string[]
+      aiProvider?: AIProvider
     }
 
     if (!questionPaperId || !sampleAnswerId || !studentScriptIds?.length) {
@@ -134,6 +136,7 @@ export async function POST(request: NextRequest) {
           studentId: scriptUpload.student_id || undefined,
           difficultyMode,
           customPromptOverride: customPrompt,
+          provider: aiProvider,
         })
 
         const processingTime = Date.now() - startTime
