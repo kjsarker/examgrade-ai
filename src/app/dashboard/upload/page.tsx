@@ -12,6 +12,7 @@ interface UploadedFile {
   status: 'uploading' | 'done' | 'error'
   uploadId?: string
   studentName?: string
+  errorMessage?: string
 }
 
 export default function UploadPage() {
@@ -41,7 +42,9 @@ export default function UploadPage() {
     try {
       const uploadId = await uploadFile(files[0], 'question_paper')
       setQuestionPaper({ ...entry, status: 'done', uploadId })
-    } catch { setQuestionPaper({ ...entry, status: 'error' }) }
+    } catch (err) {
+      setQuestionPaper({ ...entry, status: 'error', errorMessage: err instanceof Error ? err.message : 'Upload failed' })
+    }
   }, [])
 
   const handleAnswerDrop = useCallback(async (files: File[]) => {
@@ -51,7 +54,9 @@ export default function UploadPage() {
     try {
       const uploadId = await uploadFile(files[0], 'sample_answer')
       setSampleAnswer({ ...entry, status: 'done', uploadId })
-    } catch { setSampleAnswer({ ...entry, status: 'error' }) }
+    } catch (err) {
+      setSampleAnswer({ ...entry, status: 'error', errorMessage: err instanceof Error ? err.message : 'Upload failed' })
+    }
   }, [])
 
   const handleScriptsDrop = useCallback(async (files: File[]) => {
@@ -113,11 +118,12 @@ export default function UploadPage() {
 
   const statusIcon = (s: string) => s === 'uploading' ? '⏳' : s === 'done' ? '✓' : '✗'
 
-  const DropZone = ({ onDrop, label, multiple = false, file, files }: {
+  const DropZone = ({ onDrop, label, multiple = false, file, onRemove, files }: {
     onDrop: (f: File[]) => void
     label: string
     multiple?: boolean
     file?: UploadedFile | null
+    onRemove?: () => void
     files?: UploadedFile[]
   }) => {
     const accept = { 'application/pdf': ['.pdf'], 'image/*': ['.jpg', '.jpeg', '.png'], 'text/plain': ['.txt'] }
@@ -134,8 +140,16 @@ export default function UploadPage() {
         {file && (
           <div className={`mt-2 flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${file.status === 'done' ? 'bg-green-50 text-green-700' : file.status === 'error' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-500'}`}>
             <span>{statusIcon(file.status)}</span>
-            <span className="truncate">{file.file.name}</span>
-            <span className="ml-auto text-gray-400">{formatBytes(file.file.size)}</span>
+            <div className="flex-1 min-w-0">
+              <span className="truncate block">{file.file.name}</span>
+              {file.status === 'error' && file.errorMessage && (
+                <span className="text-red-400 block truncate">{file.errorMessage}</span>
+              )}
+            </div>
+            <span className="text-gray-400 shrink-0">{formatBytes(file.file.size)}</span>
+            {onRemove && (
+              <button onClick={(e) => { e.stopPropagation(); onRemove() }} className="text-gray-400 hover:text-red-500 ml-1 shrink-0">✕</button>
+            )}
           </div>
         )}
         {files && files.length > 0 && (
@@ -204,12 +218,12 @@ export default function UploadPage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Question paper</label>
-          <DropZone onDrop={handleQuestionDrop} label="PDF, image, or text file" file={questionPaper} />
+          <DropZone onDrop={handleQuestionDrop} label="PDF, image, or text file" file={questionPaper} onRemove={() => setQuestionPaper(null)} />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Sample answer / marking rubric</label>
-          <DropZone onDrop={handleAnswerDrop} label="PDF, image, or text file" file={sampleAnswer} />
+          <DropZone onDrop={handleAnswerDrop} label="PDF, image, or text file" file={sampleAnswer} onRemove={() => setSampleAnswer(null)} />
         </div>
 
         <div>
