@@ -27,8 +27,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File too large (max 20MB)' }, { status: 400 })
     }
 
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'text/plain']
-    if (!allowedTypes.includes(file.type)) {
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+      'text/plain', 'text/csv',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.oasis.opendocument.text',
+      'application/vnd.oasis.opendocument.spreadsheet',
+      'application/vnd.oasis.opendocument.presentation',
+    ]
+    // Also allow by extension for files where browsers report wrong MIME
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    const allowedExts = ['pdf','jpg','jpeg','png','webp','gif','txt','csv','doc','docx','xls','xlsx','ppt','pptx','odt','ods','odp']
+    if (!allowedTypes.includes(file.type) && !allowedExts.includes(ext || '')) {
       return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
     }
 

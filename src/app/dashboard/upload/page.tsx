@@ -126,7 +126,21 @@ export default function UploadPage() {
     onRemove?: () => void
     files?: UploadedFile[]
   }) => {
-    const accept = { 'application/pdf': ['.pdf'], 'image/*': ['.jpg', '.jpeg', '.png'], 'text/plain': ['.txt'] }
+    const accept = {
+      'application/pdf': ['.pdf'],
+      'image/*': ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
+      'text/plain': ['.txt'],
+      'text/csv': ['.csv'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-powerpoint': ['.ppt'],
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+      'application/vnd.oasis.opendocument.text': ['.odt'],
+      'application/vnd.oasis.opendocument.spreadsheet': ['.ods'],
+      'application/vnd.oasis.opendocument.presentation': ['.odp'],
+    }
     const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept, multiple })
     return (
       <div>
@@ -218,12 +232,12 @@ export default function UploadPage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Question paper</label>
-          <DropZone onDrop={handleQuestionDrop} label="PDF, image, or text file" file={questionPaper} onRemove={() => setQuestionPaper(null)} />
+          <DropZone onDrop={handleQuestionDrop} label="PDF, Word, Excel, PowerPoint, image, or text" file={questionPaper} onRemove={() => setQuestionPaper(null)} />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Sample answer / marking rubric</label>
-          <DropZone onDrop={handleAnswerDrop} label="PDF, image, or text file" file={sampleAnswer} onRemove={() => setSampleAnswer(null)} />
+          <DropZone onDrop={handleAnswerDrop} label="PDF, Word, Excel, PowerPoint, image, or text" file={sampleAnswer} onRemove={() => setSampleAnswer(null)} />
         </div>
 
         <div>
@@ -231,7 +245,7 @@ export default function UploadPage() {
             Student answer scripts
             {readyCount > 0 && <span className="ml-2 text-xs font-normal text-gray-400">{readyCount} ready</span>}
           </label>
-          <DropZone onDrop={handleScriptsDrop} label="Multiple files supported — PDF, image, or text" multiple files={studentScripts} />
+          <DropZone onDrop={handleScriptsDrop} label="PDF, Word, Excel, PowerPoint, image, text — multiple files" multiple files={studentScripts} />
         </div>
       </div>
 
