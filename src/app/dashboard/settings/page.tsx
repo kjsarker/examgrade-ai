@@ -138,25 +138,28 @@ export default function SettingsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {(Object.entries(PLAN_FEATURES) as Array<[string, typeof PLAN_FEATURES['free']]>).map(([key, p]) => (
-            <div key={key} className={`rounded-xl border p-4 ${plan === key ? 'border-gray-900 bg-gray-50' : 'border-gray-200'}`}>
-              <div className="flex items-center justify-between mb-2">
+            <div key={key} className={`rounded-xl border p-4 flex flex-col ${plan === key ? 'border-gray-900 bg-gray-50' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between mb-2 min-h-[24px]">
                 <span className="text-sm font-semibold text-gray-900">{p.name}</span>
                 {plan === key && <span className="text-xs bg-gray-900 text-white px-2 py-0.5 rounded-full">Current</span>}
               </div>
               <p className="text-lg font-semibold text-gray-900 mb-1">{p.price === 0 ? 'Free' : `$${p.price}/mo`}</p>
               <p className="text-xs text-gray-500 mb-3">{p.papers_per_month} papers{key === 'free' ? ' lifetime' : '/month'}</p>
-              <ul className="space-y-1 mb-3">
+              <ul className="space-y-1.5 mb-4 flex-1">
                 {p.features.slice(0, 3).map((f) => (
-                  <li key={f} className="text-xs text-gray-500 flex items-start gap-1.5">
-                    <span className="text-green-500 shrink-0">✓</span>{f}
+                  <li key={f} className="text-xs text-gray-600 flex items-start gap-1.5">
+                    <span className="text-green-500 shrink-0 leading-none mt-0.5">✓</span>
+                    <span className="leading-snug">{f}</span>
                   </li>
                 ))}
               </ul>
-              {key !== 'free' && plan !== key && (
+              {key !== 'free' && plan !== key ? (
                 <button onClick={() => handleUpgrade(key as 'pro' | 'premium')} disabled={!!checkoutLoading}
-                  className="w-full bg-gray-900 text-white text-xs py-2 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-40">
+                  className="mt-auto w-full bg-gray-900 text-white text-xs font-medium py-2.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-40">
                   {checkoutLoading === key ? 'Loading…' : `Upgrade to ${p.name}`}
                 </button>
+              ) : (
+                <div className="mt-auto h-[38px]" />
               )}
             </div>
           ))}
