@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, createServiceClient } from '@/lib/supabase/server'
 import { DifficultyMode } from '@/types'
 import { sendPapersReadyEmail } from '@/services/email'
 
@@ -7,11 +7,14 @@ export const maxDuration = 60
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createAdminClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const authClient = await createAdminClient()
+    const { data: { user } } = await authClient.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Use service client (bypasses RLS) for all data operations
+    const supabase = createServiceClient()
 
     const body = await request.json()
     const {
@@ -72,46 +75,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch all file metadata in parallel
-    const [questionPaperUpload, sampleAnswerUpload, ...studentUploadsRaw] = await Promise.all([
-      supabase.from('uploads').select('*').eq('id', questionPaperId).single(),
-      supabase.from('uploads').select('*').eq('id', sampleAnswerId).single(),
-      ...studentScriptIds.map(id => supabase.from('uploads').select('*').eq('id', id).single()),
-    ])
+    const allUploadIds = [questionPaperId, sampleAnswerId, ...studentScriptIds]
+    const { data: uploads } = await supabase
+      .from('uploads')
+      .select('*')
+      .in('id', allUploadIds)
+
+    const uploadsMap = Object.fromEntries((uploads || []).map(u => [u.id, u]))
+
+    const qp = uploadsMap[questionPaperId]
+    const sa = uploadsMap[sampleAnswerId]
+    const scripts = studentScriptIds.map(id => uploadsMap[id]).filter(Boolean)
 
     // Build file list for email
     const emailFiles: Array<{ label: string; fileName: string; url: string }> = []
-
-    if (questionPaperUpload.data) {
+    if (qp) emailFiles.push({ label: 'Question Paper', fileName: qp.file_name, url: qp.file_url })
+    if (sa) emailFiles.push({ label: 'Sample Answer', fileName: sa.file_name, url: sa.file_url })
+    for (const s of scripts) {
       emailFiles.push({
-        label: 'Question Paper',
-        fileName: questionPaperUpload.data.file_name,
-        url: questionPaperUpload.data.file_url,
+        label: 'Student Script',
+        fileName: s.student_name ? `${s.student_name} — ${s.file_name}` : s.file_name,
+        url: s.file_url,
       })
     }
 
-    if (sampleAnswerUpload.data) {
-      emailFiles.push({
-        label: 'Sample Answer',
-        fileName: sampleAnswerUpload.data.file_name,
-        url: sampleAnswerUpload.data.file_url,
-      })
-    }
+    const uploadedCount = scripts.length
 
-    for (const { data: script } of studentUploadsRaw) {
-      if (script) {
-        emailFiles.push({
-          label: 'Student Script',
-          fileName: script.student_name
-            ? `${script.student_name} — ${script.file_name}`
-            : script.file_name,
-          url: script.file_url,
-        })
-      }
-    }
-
-    const uploadedCount = studentUploadsRaw.filter(u => u.data).length
-
-    // Mark job as completed (manual grading)
+    // Mark job completed
     await supabase
       .from('grading_jobs')
       .update({
@@ -128,23 +118,24 @@ export async function POST(request: NextRequest) {
       .update({ papers_used: userProfile.papers_used + uploadedCount })
       .eq('id', user.id)
 
-    // Send email with all download links
+    // ZIP download URL for this job
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+    const zipUrl = `${appUrl}/api/grading/download/${job.id}`
+
+    // Send email
     try {
       await sendPapersReadyEmail({
         to: user.email!,
         professorName: userProfile.full_name || '',
         job,
         files: emailFiles,
+        zipUrl,
       })
     } catch (emailError) {
       console.error('Email sending failed:', emailError)
     }
 
-    return NextResponse.json({
-      jobId: job.id,
-      processed: uploadedCount,
-      emailSent: true,
-    })
+    return NextResponse.json({ jobId: job.id, processed: uploadedCount, emailSent: true })
   } catch (error) {
     console.error('Job creation error:', error)
     return NextResponse.json(
