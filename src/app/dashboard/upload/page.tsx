@@ -25,6 +25,7 @@ export default function UploadPage() {
   const [isGrading, setIsGrading] = useState(false)
   const [error, setError] = useState('')
   const [successJobId, setSuccessJobId] = useState<string | null>(null)
+  const [driveFolderUrl, setDriveFolderUrl] = useState<string | null>(null)
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
 
   const uploadFile = async (file: File, uploadType: string, studentName?: string): Promise<string> => {
@@ -117,6 +118,7 @@ export default function UploadPage() {
       }
       if (!res.ok) throw new Error(data.error || 'Grading failed')
       setSuccessJobId(data.jobId)
+      setDriveFolderUrl(data.driveFolderUrl || null)
       setIsGrading(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Grading failed')
@@ -272,16 +274,26 @@ export default function UploadPage() {
             <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto">
               <span className="text-2xl">✓</span>
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">Grading Started!</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Papers Uploaded!</h2>
             <p className="text-sm text-gray-500">
-              Your papers are being graded. You will receive an email with the results and report once grading is complete.
+              All exam papers have been uploaded to Google Drive. You will receive an email with the folder link.
             </p>
+            {driveFolderUrl && (
+              <a
+                href={driveFolderUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-green-600 text-white py-2.5 px-4 rounded-xl text-sm font-medium hover:bg-green-700 transition-colors w-full justify-center"
+              >
+                📁 Open Google Drive Folder
+              </a>
+            )}
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => router.push(`/dashboard/jobs/${successJobId}`)}
                 className="flex-1 bg-gray-900 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
               >
-                View Results
+                View Job
               </button>
               <button
                 onClick={() => router.push('/dashboard/jobs')}
