@@ -262,7 +262,7 @@ export default function UploadPage() {
         disabled={isGrading || !questionPaper?.uploadId || !sampleAnswer?.uploadId || readyCount === 0}
         className="w-full bg-gray-900 text-white py-3 rounded-xl font-medium hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {isGrading ? 'Sending papers…' : `Submit for Grading${readyCount > 0 ? ` (${readyCount} papers)` : ''}`}
+        {isGrading ? 'Grading in progress… this may take a few minutes' : `Start Grading${readyCount > 0 ? ` (${readyCount} papers)` : ''}`}
       </button>
 
       {/* Success confirmation dialog */}
@@ -274,15 +274,10 @@ export default function UploadPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">Papers Have Been Sent</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Grading Complete!</h2>
             <p className="text-sm text-gray-500 leading-relaxed">
-              All exam papers have been sent to your email with download links. Once you have completed grading, a results email will be sent to you.
+              All papers have been graded by AI. A full report with scores and feedback has been sent to your email.
             </p>
-            <div className="bg-gray-50 rounded-xl px-4 py-3 text-xs text-gray-400 text-left space-y-1">
-              <p>✓ Question paper</p>
-              <p>✓ Sample answer / rubric</p>
-              <p>✓ {readyCount} student script{readyCount !== 1 ? 's' : ''}</p>
-            </div>
             <div className="flex gap-3 pt-1">
               <button
                 onClick={() => router.push(`/dashboard/jobs/${successJobId}`)}
