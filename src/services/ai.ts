@@ -4,10 +4,7 @@ import { buildGradingPrompt, buildGradingUserMessage } from './prompts'
 
 let _client: OpenAI | null = null
 function getClient() {
-  if (!_client) _client = new OpenAI({
-    apiKey: process.env.NVIDIA_API_KEY!,
-    baseURL: 'https://integrate.api.nvidia.com/v1',
-  })
+  if (!_client) _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
   return _client
 }
 
@@ -35,21 +32,17 @@ export async function gradeStudentPaper(params: {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const response = await getClient().chat.completions.create({
-        model: 'minimaxai/minimax-m2.7',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage },
         ],
-        temperature: 1,
-        top_p: 0.95,
-        max_tokens: 8192,
+        max_tokens: 4096,
+        response_format: { type: 'json_object' },
       })
 
       const text = response.choices[0]?.message?.content || ''
-      // Extract JSON from the response (model may wrap it in markdown)
-      const jsonMatch = text.match(/```json\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\})/)
-      const jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text
-      const result = JSON.parse(jsonText) as AIGradingResponse
+      const result = JSON.parse(text) as AIGradingResponse
 
       if (
         typeof result.total_score !== 'number' ||

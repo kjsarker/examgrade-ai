@@ -24,6 +24,8 @@ export default function UploadPage() {
   const [studentScripts, setStudentScripts] = useState<UploadedFile[]>([])
   const [isGrading, setIsGrading] = useState(false)
   const [error, setError] = useState('')
+  const [successJobId, setSuccessJobId] = useState<string | null>(null)
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
 
   const uploadFile = async (file: File, uploadType: string, studentName?: string): Promise<string> => {
     const formData = new FormData()
@@ -108,8 +110,14 @@ export default function UploadPage() {
         }),
       })
       const data = await res.json()
+      if (res.status === 403) {
+        setShowUpgradePrompt(true)
+        setIsGrading(false)
+        return
+      }
       if (!res.ok) throw new Error(data.error || 'Grading failed')
-      router.push(`/dashboard/jobs/${data.jobId}`)
+      setSuccessJobId(data.jobId)
+      setIsGrading(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Grading failed')
       setIsGrading(false)
@@ -256,6 +264,64 @@ export default function UploadPage() {
       >
         {isGrading ? 'Grading in progress… this may take a few minutes' : `Start Grading${readyCount > 0 ? ` (${readyCount} papers)` : ''}`}
       </button>
+
+      {/* Success confirmation dialog */}
+      {successJobId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl text-center space-y-4">
+            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-2xl">✓</span>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900">Grading Started!</h2>
+            <p className="text-sm text-gray-500">
+              Your papers are being graded. You will receive an email with the results and report once grading is complete.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => router.push(`/dashboard/jobs/${successJobId}`)}
+                className="flex-1 bg-gray-900 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+              >
+                View Results
+              </button>
+              <button
+                onClick={() => router.push('/dashboard/jobs')}
+                className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                All Jobs
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade prompt dialog */}
+      {showUpgradePrompt && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl text-center space-y-4">
+            <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-2xl">⚡</span>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900">Free Plan Limit Reached</h2>
+            <p className="text-sm text-gray-500">
+              You have used all 50 free papers included in your trial. Upgrade to Pro or Premium to grade more papers.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => router.push('/dashboard/settings')}
+                className="flex-1 bg-gray-900 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+              >
+                Upgrade Plan
+              </button>
+              <button
+                onClick={() => setShowUpgradePrompt(false)}
+                className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
