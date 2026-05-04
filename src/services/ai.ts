@@ -8,26 +8,10 @@ function getClient() {
   return _client
 }
 
-type ContentPart = OpenAI.Chat.ChatCompletionContentPart
-
-// Build content parts for a document: text or file reference for scanned PDFs
-function docParts(label: string, text: string, fileId?: string): ContentPart[] {
-  if (fileId) {
-    return [
-      { type: 'text', text: `${label}:` },
-      { type: 'file', file: { file_id: fileId } } as unknown as ContentPart,
-    ]
-  }
-  return [{ type: 'text', text: `${label}:\n${text}` }]
-}
-
 export async function gradeStudentPaper(params: {
-  questionPaper: string
-  questionPaperFileId?: string
-  sampleAnswer: string
-  sampleAnswerFileId?: string
-  studentScript: string
-  studentScriptFileId?: string
+  questionPaperUrl: string
+  sampleAnswerUrl: string
+  studentScriptUrl: string
   studentName: string
   studentId?: string
   difficultyMode: DifficultyMode
@@ -35,44 +19,49 @@ export async function gradeStudentPaper(params: {
   retries?: number
 }): Promise<AIGradingResponse> {
   const {
-    questionPaper, questionPaperFileId,
-    sampleAnswer, sampleAnswerFileId,
-    studentScript, studentScriptFileId,
+    questionPaperUrl, sampleAnswerUrl, studentScriptUrl,
     studentName, studentId, difficultyMode, customPromptOverride,
     retries = 3,
   } = params
 
   const systemPrompt = buildGradingPrompt(difficultyMode, customPromptOverride)
-  const hasFiles = !!(questionPaperFileId || sampleAnswerFileId || studentScriptFileId)
 
-  const userContent: ContentPart[] = [
-    { type: 'text', text: `Student: ${studentName}${studentId ? ` (ID: ${studentId})` : ''}` },
-    ...docParts('QUESTION PAPER', questionPaper, questionPaperFileId),
-    ...docParts('SAMPLE ANSWER / MARKING RUBRIC', sampleAnswer, sampleAnswerFileId),
-    ...docParts('STUDENT SUBMISSION', studentScript, studentScriptFileId),
-  ]
+  const instructions = [
+    systemPrompt,
+    `Student name: ${studentName}${studentId ? ` (ID: ${studentId})` : ''}`,
+    'The files provided are: [1] Question Paper, [2] Sample Answer / Marking Rubric, [3] Student Submission.',
+    'Grade the student submission against the question paper and marking rubric. Return JSON only.',
+  ].join('\n')
 
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const response = await getClient().chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: systemPrompt },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await (getClient() as any).responses.create({
+        model: 'gpt-4.1',
+        input: [
           {
             role: 'user',
-            content: hasFiles
-              ? userContent
-              : userContent.map((p) => (p as { text: string }).text).join('\n'),
+            content: [
+              { type: 'input_text', text: instructions },
+              { type: 'input_text', text: '[1] QUESTION PAPER:' },
+              { type: 'input_file', filename: 'question_paper.pdf', file_url: questionPaperUrl },
+              { type: 'input_text', text: '[2] SAMPLE ANSWER / MARKING RUBRIC:' },
+              { type: 'input_file', filename: 'sample_answer.pdf', file_url: sampleAnswerUrl },
+              { type: 'input_text', text: '[3] STUDENT SUBMISSION:' },
+              { type: 'input_file', filename: 'student_script.pdf', file_url: studentScriptUrl },
+            ],
           },
         ],
-        max_tokens: 4096,
-        response_format: { type: 'json_object' },
+        text: { format: { type: 'json_object' } },
+        max_output_tokens: 4096,
       })
 
-      const text = response.choices[0]?.message?.content || ''
-      const result = JSON.parse(text) as AIGradingResponse
+      // Responses API returns output differently
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const outputText = (response as any).output_text || (response as any).output?.[0]?.content?.[0]?.text || ''
+      const result = JSON.parse(outputText) as AIGradingResponse
 
       if (
         typeof result.total_score !== 'number' ||

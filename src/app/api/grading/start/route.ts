@@ -87,20 +87,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create grading job' }, { status: 500 })
     }
 
-    // Fetch file contents
+    // Fetch file metadata
     const [questionPaperUpload, sampleAnswerUpload] = await Promise.all([
       supabase.from('uploads').select('*').eq('id', questionPaperId).single(),
       supabase.from('uploads').select('*').eq('id', sampleAnswerId).single(),
     ])
 
-    const questionPaperResult = await fetchAndExtractText(
-      questionPaperUpload.data?.file_url,
-      questionPaperUpload.data?.file_name
-    )
-    const sampleAnswerResult = await fetchAndExtractText(
-      sampleAnswerUpload.data?.file_url,
-      sampleAnswerUpload.data?.file_name
-    )
+    const questionPaperUrl = questionPaperUpload.data?.file_url
+    const sampleAnswerUrl = sampleAnswerUpload.data?.file_url
 
     // Grade each student paper
     const gradingResults = []
@@ -121,18 +115,11 @@ export async function POST(request: NextRequest) {
 
       try {
         const startTime = Date.now()
-        const studentResult = await fetchAndExtractText(
-          scriptUpload.file_url,
-          scriptUpload.file_name
-        )
 
         const aiResult = await gradeStudentPaper({
-          questionPaper: questionPaperResult.text,
-          questionPaperFileId: questionPaperResult.fileId,
-          sampleAnswer: sampleAnswerResult.text,
-          sampleAnswerFileId: sampleAnswerResult.fileId,
-          studentScript: studentResult.text,
-          studentScriptFileId: studentResult.fileId,
+          questionPaperUrl,
+          sampleAnswerUrl,
+          studentScriptUrl: scriptUpload.file_url,
           studentName: scriptUpload.student_name || scriptUpload.file_name,
           studentId: scriptUpload.student_id || undefined,
           difficultyMode,
@@ -287,34 +274,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-const PDF_B64_RE = /^__PDF_BASE64__([\s\S]+)__END_PDF_BASE64__$/
-
-async function fetchAndExtractText(
-  url: string,
-  fileName: string
-): Promise<{ text: string; fileId?: string }> {
-  const response = await fetch(url)
-  const buffer = await response.arrayBuffer()
-  const { extractTextFromFile } = await import('@/services/storage')
-  const text = await extractTextFromFile(buffer, fileName)
-
-  // Scanned PDF — upload to OpenAI Files API so GPT-4o can read it via vision
-  const b64Match = text.trim().match(PDF_B64_RE)
-  if (b64Match) {
-    try {
-      const OpenAI = (await import('openai')).default
-      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
-      const pdfBuffer = Buffer.from(b64Match[1], 'base64')
-      const file = await client.files.create({
-        file: new File([pdfBuffer], fileName, { type: 'application/pdf' }),
-        purpose: 'user_data',
-      })
-      return { text: `[Scanned PDF: ${fileName}]`, fileId: file.id }
-    } catch (e) {
-      console.error('OpenAI file upload failed:', e)
-      return { text: `[Scanned PDF: ${fileName} — could not be processed]` }
-    }
-  }
-
-  return { text }
-}
