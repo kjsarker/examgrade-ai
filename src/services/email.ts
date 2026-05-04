@@ -1,85 +1,73 @@
 import { Resend } from 'resend'
-import { GradingJob, GradingResult } from '@/types'
+import { GradingJob } from '@/types'
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
 
-export async function sendGradingCompleteEmail(params: {
+export async function sendPapersReadyEmail(params: {
   to: string
   professorName: string
   job: GradingJob
-  results: GradingResult[]
-  csvBuffer?: Buffer
-  pdfBuffer?: Buffer
-  driveFolderUrl?: string
+  files: Array<{
+    label: string
+    fileName: string
+    url: string
+  }>
 }): Promise<void> {
-  const { to, professorName, job, results, csvBuffer, pdfBuffer, driveFolderUrl } = params
+  const { to, professorName, job, files } = params
 
-  const attachments: Array<{ filename: string; content: Buffer }> = []
+  const questionPapers = files.filter(f => f.label === 'Question Paper')
+  const sampleAnswers = files.filter(f => f.label === 'Sample Answer')
+  const studentScripts = files.filter(f => f.label === 'Student Script')
 
-  if (csvBuffer) {
-    attachments.push({ filename: `grading-results-${job.id}.csv`, content: csvBuffer })
-  }
-  if (pdfBuffer) {
-    attachments.push({ filename: `grading-report-${job.id}.pdf`, content: pdfBuffer })
-  }
-
-  const avg =
-    results.length > 0
-      ? (results.reduce((s, r) => s + (r.percentage || 0), 0) / results.length).toFixed(1)
-      : null
-
-  const driveSection = driveFolderUrl
-    ? `
-      <div style="background: #e8f5e9; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #4caf50;">
-        <h3 style="margin-top:0; color:#2e7d32;">📁 Files Uploaded to Google Drive</h3>
-        <p>All exam papers have been organised into a Google Drive folder for manual grading.</p>
-        <a href="${driveFolderUrl}"
-           style="display:inline-block; background:#4caf50; color:white; padding:10px 20px;
-                  border-radius:8px; text-decoration:none; margin-top:8px;">
-          Open Drive Folder
-        </a>
-      </div>
-    `
-    : ''
-
-  const summarySection = avg
-    ? `
-      <div style="background: #f5f5f7; border-radius: 12px; padding: 20px; margin: 20px 0;">
-        <h3 style="margin-top:0;">Summary</h3>
-        <p>📄 Papers graded: <strong>${results.length}</strong></p>
-        <p>📊 Class average: <strong>${avg}%</strong></p>
-        <p>⚡ Difficulty mode: <strong>${job.difficulty_mode?.toUpperCase()}</strong></p>
-      </div>
-    `
-    : `
-      <div style="background: #f5f5f7; border-radius: 12px; padding: 20px; margin: 20px 0;">
-        <h3 style="margin-top:0;">Summary</h3>
-        <p>📄 Papers uploaded: <strong>${job.total_papers}</strong></p>
+  const section = (title: string, items: typeof files) =>
+    items.length === 0 ? '' : `
+      <div style="margin: 20px 0;">
+        <h3 style="margin:0 0 10px; font-size:14px; color:#555; text-transform:uppercase; letter-spacing:0.05em;">${title}</h3>
+        ${items.map(f => `
+          <div style="margin-bottom:8px;">
+            <a href="${f.url}" style="color:#1a1a2e; font-weight:500; text-decoration:none;">
+              📄 ${f.fileName}
+            </a>
+          </div>
+        `).join('')}
       </div>
     `
 
   await resend.emails.send({
     from: process.env.EMAIL_FROM!,
     to,
-    subject: `✅ Papers Ready: ${job.title}`,
+    subject: `📬 New Grading Job: ${job.title}`,
     html: `
-      <div style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #1a1a2e;">Papers Ready for Grading</h1>
-        <p>Hi ${professorName || 'Professor'},</p>
-        <p>Your exam papers for <strong>${job.title}</strong> have been uploaded successfully.</p>
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;color:#1a1a2e;">
+        <div style="background:#1a1a2e;padding:24px 32px;border-radius:12px 12px 0 0;">
+          <h1 style="margin:0;color:#fff;font-size:20px;font-weight:600;">Papers Ready for Grading</h1>
+        </div>
+        <div style="background:#f9f9fb;padding:32px;border-radius:0 0 12px 12px;border:1px solid #e5e5ea;border-top:none;">
+          <p style="margin:0 0 20px;">Hi ${professorName || 'Professor'},</p>
+          <p style="margin:0 0 24px;color:#444;">
+            A new grading job <strong>${job.title}</strong> has been submitted with
+            <strong>${studentScripts.length}</strong> student script${studentScripts.length !== 1 ? 's' : ''}.
+            Click the links below to download the files for grading.
+          </p>
 
-        ${summarySection}
-        ${driveSection}
+          <div style="background:#fff;border:1px solid #e5e5ea;border-radius:10px;padding:20px 24px;">
+            ${section('Question Paper', questionPapers)}
+            ${section('Sample Answer / Rubric', sampleAnswers)}
+            ${section(`Student Scripts (${studentScripts.length})`, studentScripts)}
+          </div>
 
-        <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/jobs/${job.id}"
-           style="display:inline-block; background:#1a1a2e; color:white; padding:12px 24px;
-                  border-radius:8px; text-decoration:none; margin-top:10px;">
-          View Job
-        </a>
+          <p style="margin:24px 0 0;font-size:13px;color:#888;">
+            Once you have finished grading, log in to your dashboard to record results.
+          </p>
 
-        <p style="color:#888; font-size:12px; margin-top:30px;">ExamGrade AI</p>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/jobs/${job.id}"
+             style="display:inline-block;margin-top:16px;background:#1a1a2e;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:500;font-size:14px;">
+            View Job Dashboard
+          </a>
+
+          <p style="margin:32px 0 0;font-size:12px;color:#bbb;">ExamGrade AI</p>
+        </div>
       </div>
     `,
-    attachments: attachments.length > 0 ? attachments : undefined,
   })
 }

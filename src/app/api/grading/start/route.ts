@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { DifficultyMode } from '@/types'
-import { uploadJobFilesToDrive } from '@/services/drive'
-import { sendGradingCompleteEmail } from '@/services/email'
+import { sendPapersReadyEmail } from '@/services/email'
 
-export const maxDuration = 300 // 5 minutes
+export const maxDuration = 60
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Check plan limits
     const { data: userProfile } = await supabase
       .from('users')
-      .select('plan, papers_used, papers_limit')
+      .select('plan, papers_used, papers_limit, full_name')
       .eq('id', user.id)
       .single()
 
@@ -72,79 +71,53 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create grading job' }, { status: 500 })
     }
 
-    // Fetch file metadata
-    const [questionPaperUpload, sampleAnswerUpload] = await Promise.all([
+    // Fetch all file metadata in parallel
+    const [questionPaperUpload, sampleAnswerUpload, ...studentUploadsRaw] = await Promise.all([
       supabase.from('uploads').select('*').eq('id', questionPaperId).single(),
       supabase.from('uploads').select('*').eq('id', sampleAnswerId).single(),
+      ...studentScriptIds.map(id => supabase.from('uploads').select('*').eq('id', id).single()),
     ])
 
-    const studentUploads = await Promise.all(
-      studentScriptIds.map((id) =>
-        supabase.from('uploads').select('*').eq('id', id).single()
-      )
-    )
-
-    // Build file list for Drive upload
-    const driveFiles: Array<{
-      url: string
-      fileName: string
-      mimeType: string
-      category: string
-    }> = []
+    // Build file list for email
+    const emailFiles: Array<{ label: string; fileName: string; url: string }> = []
 
     if (questionPaperUpload.data) {
-      driveFiles.push({
-        url: questionPaperUpload.data.file_url,
+      emailFiles.push({
+        label: 'Question Paper',
         fileName: questionPaperUpload.data.file_name,
-        mimeType: questionPaperUpload.data.file_type || 'application/octet-stream',
-        category: 'Question Paper',
+        url: questionPaperUpload.data.file_url,
       })
     }
 
     if (sampleAnswerUpload.data) {
-      driveFiles.push({
-        url: sampleAnswerUpload.data.file_url,
+      emailFiles.push({
+        label: 'Sample Answer',
         fileName: sampleAnswerUpload.data.file_name,
-        mimeType: sampleAnswerUpload.data.file_type || 'application/octet-stream',
-        category: 'Sample Answer',
+        url: sampleAnswerUpload.data.file_url,
       })
     }
 
-    for (const { data: script } of studentUploads) {
+    for (const { data: script } of studentUploadsRaw) {
       if (script) {
-        driveFiles.push({
-          url: script.file_url,
+        emailFiles.push({
+          label: 'Student Script',
           fileName: script.student_name
             ? `${script.student_name} — ${script.file_name}`
             : script.file_name,
-          mimeType: script.file_type || 'application/octet-stream',
-          category: 'Student Script',
+          url: script.file_url,
         })
       }
     }
 
-    // Upload all files to Google Drive
-    let driveResult: { folderId: string; folderUrl: string; fileLinks: Record<string, string> } | null = null
-    let driveError: string | null = null
+    const uploadedCount = studentUploadsRaw.filter(u => u.data).length
 
-    try {
-      driveResult = await uploadJobFilesToDrive({ jobTitle, files: driveFiles })
-    } catch (err) {
-      console.error('Google Drive upload failed:', err)
-      driveError = err instanceof Error ? err.message : 'Drive upload failed'
-    }
-
-    const uploadedCount = studentUploads.filter((u) => u.data).length
-    const failedCount = studentScriptIds.length - uploadedCount
-
-    // Mark job complete
+    // Mark job as completed (manual grading)
     await supabase
       .from('grading_jobs')
       .update({
-        status: driveError ? 'failed' : 'completed',
+        status: 'completed',
         processed_papers: uploadedCount,
-        failed_papers: failedCount,
-        pdf_report_url: driveResult?.folderUrl || null,
+        failed_papers: studentScriptIds.length - uploadedCount,
         completed_at: new Date().toISOString(),
       })
       .eq('id', job.id)
@@ -155,38 +128,27 @@ export async function POST(request: NextRequest) {
       .update({ papers_used: userProfile.papers_used + uploadedCount })
       .eq('id', user.id)
 
-    // Send notification email with Drive folder link
-    if (driveResult) {
-      try {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('full_name')
-          .eq('id', user.id)
-          .single()
-
-        await sendGradingCompleteEmail({
-          to: user.email!,
-          professorName: profile?.full_name || '',
-          job: { ...job, status: 'completed' },
-          results: [],
-          driveFolderUrl: driveResult.folderUrl,
-        })
-      } catch (emailError) {
-        console.error('Email sending failed:', emailError)
-      }
+    // Send email with all download links
+    try {
+      await sendPapersReadyEmail({
+        to: user.email!,
+        professorName: userProfile.full_name || '',
+        job,
+        files: emailFiles,
+      })
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError)
     }
 
     return NextResponse.json({
       jobId: job.id,
       processed: uploadedCount,
-      failed: failedCount,
-      driveFolderUrl: driveResult?.folderUrl || null,
-      driveError,
+      emailSent: true,
     })
   } catch (error) {
-    console.error('Grading error:', error)
+    console.error('Job creation error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to process job' },
+      { error: error instanceof Error ? error.message : 'Failed to create job' },
       { status: 500 }
     )
   }

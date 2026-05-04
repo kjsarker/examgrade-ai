@@ -25,7 +25,6 @@ export default function UploadPage() {
   const [isGrading, setIsGrading] = useState(false)
   const [error, setError] = useState('')
   const [successJobId, setSuccessJobId] = useState<string | null>(null)
-  const [driveFolderUrl, setDriveFolderUrl] = useState<string | null>(null)
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
 
   const uploadFile = async (file: File, uploadType: string, studentName?: string): Promise<string> => {
@@ -118,7 +117,6 @@ export default function UploadPage() {
       }
       if (!res.ok) throw new Error(data.error || 'Grading failed')
       setSuccessJobId(data.jobId)
-      setDriveFolderUrl(data.driveFolderUrl || null)
       setIsGrading(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Grading failed')
@@ -264,31 +262,28 @@ export default function UploadPage() {
         disabled={isGrading || !questionPaper?.uploadId || !sampleAnswer?.uploadId || readyCount === 0}
         className="w-full bg-gray-900 text-white py-3 rounded-xl font-medium hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {isGrading ? 'Grading in progress… this may take a few minutes' : `Start Grading${readyCount > 0 ? ` (${readyCount} papers)` : ''}`}
+        {isGrading ? 'Sending papers…' : `Submit for Grading${readyCount > 0 ? ` (${readyCount} papers)` : ''}`}
       </button>
 
       {/* Success confirmation dialog */}
       {successJobId && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl text-center space-y-4">
-            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <span className="text-2xl">✓</span>
+            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">Papers Uploaded!</h2>
-            <p className="text-sm text-gray-500">
-              All exam papers have been uploaded to Google Drive. You will receive an email with the folder link.
+            <h2 className="text-xl font-semibold text-gray-900">Papers Have Been Sent</h2>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              All exam papers have been sent to your email with download links. Once you have completed grading, a results email will be sent to you.
             </p>
-            {driveFolderUrl && (
-              <a
-                href={driveFolderUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-green-600 text-white py-2.5 px-4 rounded-xl text-sm font-medium hover:bg-green-700 transition-colors w-full justify-center"
-              >
-                📁 Open Google Drive Folder
-              </a>
-            )}
-            <div className="flex gap-3 pt-2">
+            <div className="bg-gray-50 rounded-xl px-4 py-3 text-xs text-gray-400 text-left space-y-1">
+              <p>✓ Question paper</p>
+              <p>✓ Sample answer / rubric</p>
+              <p>✓ {readyCount} student script{readyCount !== 1 ? 's' : ''}</p>
+            </div>
+            <div className="flex gap-3 pt-1">
               <button
                 onClick={() => router.push(`/dashboard/jobs/${successJobId}`)}
                 className="flex-1 bg-gray-900 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
