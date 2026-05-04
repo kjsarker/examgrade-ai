@@ -57,18 +57,14 @@ export async function extractTextFromFile(
   // PDF
   if (ext === 'pdf') {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pdfParse: any = (await import('pdf-parse'))
-      const data = await (pdfParse.default || pdfParse)(buffer)
-      if (data.text?.trim()) return data.text
-    } catch {}
-    // Basic fallback
-    const text = new TextDecoder('utf-8', { fatal: false }).decode(fileBuffer)
-    const matches = text.match(/[^\x00-\x1F\x7F-\xFF]{4,}/g) || []
-    const readable = matches
-      .filter((s) => s.trim().length > 0 && !/^[^a-zA-Z0-9 ]+$/.test(s))
-      .join(' ')
-    return readable.length > 100 ? readable : `[PDF: ${fileName} — text extraction unavailable]`
+      const { extractText } = await import('unpdf')
+      const pages = await extractText(new Uint8Array(fileBuffer), { mergePages: true })
+      const text = Array.isArray(pages) ? pages.join('\n') : String(pages)
+      if (text?.trim().length > 50) return text
+    } catch (e) {
+      console.error('unpdf extraction failed:', e)
+    }
+    return `[PDF: ${fileName} — text extraction failed. Please convert to a text-selectable PDF or use DOCX format.]`
   }
 
   // Word DOCX
