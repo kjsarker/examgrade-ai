@@ -54,7 +54,7 @@ export async function extractTextFromFile(
     return new TextDecoder().decode(fileBuffer)
   }
 
-  // PDF
+  // PDF — try text extraction first, fall back to base64 marker for vision
   if (ext === 'pdf') {
     try {
       const { extractText } = await import('unpdf')
@@ -64,7 +64,9 @@ export async function extractTextFromFile(
     } catch (e) {
       console.error('unpdf extraction failed:', e)
     }
-    return `[PDF: ${fileName} — text could not be extracted. Please use a text-selectable PDF or DOCX format.]`
+    // Scanned PDF — return base64 so caller can use GPT-4o vision
+    const base64 = buffer.toString('base64')
+    return `__PDF_BASE64__${base64}__END_PDF_BASE64__`
   }
 
   // Word DOCX
