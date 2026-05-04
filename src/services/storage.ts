@@ -58,13 +58,13 @@ export async function extractTextFromFile(
   if (ext === 'pdf') {
     try {
       const { extractText } = await import('unpdf')
-      const pages = await extractText(new Uint8Array(fileBuffer), { mergePages: true })
-      const text = Array.isArray(pages) ? pages.join('\n') : String(pages)
-      if (text?.trim().length > 50) return text
+      const { text } = await extractText(new Uint8Array(fileBuffer), { mergePages: true })
+      const combined = typeof text === 'string' ? text : (text as string[]).join('\n')
+      if (combined?.trim().length > 50) return combined
     } catch (e) {
       console.error('unpdf extraction failed:', e)
     }
-    return `[PDF: ${fileName} — text extraction failed. Please convert to a text-selectable PDF or use DOCX format.]`
+    return `[PDF: ${fileName} — text could not be extracted. Please use a text-selectable PDF or DOCX format.]`
   }
 
   // Word DOCX
