@@ -39,7 +39,7 @@ export async function gradeStudentPaper(params: {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await (getClient() as any).responses.create({
-        model: 'gpt-4.1',
+        model: 'gpt-5.5',
         input: [
           {
             role: 'user',
