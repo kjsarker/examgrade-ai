@@ -48,7 +48,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
     }
 
-    const ext = file.name.split('.').pop()
     const path = `${user.id}/${uploadType}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
     const bytes = await file.arrayBuffer()

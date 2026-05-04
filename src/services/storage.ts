@@ -57,8 +57,9 @@ export async function extractTextFromFile(
   // PDF
   if (ext === 'pdf') {
     try {
-      const pdfParse = (await import('pdf-parse')).default
-      const data = await pdfParse(buffer)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pdfParse: any = (await import('pdf-parse'))
+      const data = await (pdfParse.default || pdfParse)(buffer)
       if (data.text?.trim()) return data.text
     } catch {}
     // Basic fallback
