@@ -14,7 +14,7 @@ interface Props {
 const navItems = [
   { href: '/dashboard', label: 'Overview', icon: '⊞' },
   { href: '/dashboard/upload', label: 'New Grading Job', icon: '+' },
-  { href: '/dashboard/jobs', label: 'Grading Jobs', icon: '≡' },
+  { href: '/dashboard/jobs', label: 'Recent Grading Jobs', icon: '≡' },
   { href: '/dashboard/settings', label: 'Settings', icon: '⚙' },
 ]
 

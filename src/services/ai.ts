@@ -26,13 +26,6 @@ export async function gradeStudentPaper(params: {
 
   const systemPrompt = buildGradingPrompt(difficultyMode, customPromptOverride)
 
-  const instructions = [
-    systemPrompt,
-    `Student name: ${studentName}${studentId ? ` (ID: ${studentId})` : ''}`,
-    'The files provided are: [1] Question Paper, [2] Sample Answer / Marking Rubric, [3] Student Submission.',
-    'Grade the student submission against the question paper and marking rubric. Return JSON only.',
-  ].join('\n')
-
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -40,11 +33,15 @@ export async function gradeStudentPaper(params: {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await (getClient() as any).responses.create({
         model: 'gpt-4.1',
+        instructions: systemPrompt,   // system-level prompt (custom or default)
         input: [
           {
             role: 'user',
             content: [
-              { type: 'input_text', text: instructions },
+              {
+                type: 'input_text',
+                text: `Student name: ${studentName}${studentId ? ` (ID: ${studentId})` : ''}\nFiles: [1] Question Paper, [2] Sample Answer / Rubric, [3] Student Submission.\nGrade the student submission and return JSON only.`,
+              },
               { type: 'input_text', text: '[1] QUESTION PAPER:' },
               { type: 'input_file', file_url: questionPaperUrl },
               { type: 'input_text', text: '[2] SAMPLE ANSWER / MARKING RUBRIC:' },

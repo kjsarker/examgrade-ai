@@ -25,6 +25,7 @@ export default function UploadPage() {
   const [isGrading, setIsGrading] = useState(false)
   const [error, setError] = useState('')
   const [successJobId, setSuccessJobId] = useState<string | null>(null)
+  const [gradingProgress, setGradingProgress] = useState<{ done: number; total: number } | null>(null)
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
 
   const uploadFile = async (file: File, uploadType: string, studentName?: string): Promise<string> => {
@@ -97,6 +98,7 @@ export default function UploadPage() {
     }
     setIsGrading(true)
     setError('')
+    setGradingProgress(null)
     try {
       const res = await fetch('/api/grading/start', {
         method: 'POST',
@@ -116,11 +118,33 @@ export default function UploadPage() {
         return
       }
       if (!res.ok) throw new Error(data.error || 'Grading failed')
-      setSuccessJobId(data.jobId)
+
+      // Poll progress until complete
+      const jobId = data.jobId
+      const total = readyScripts.length
+      setGradingProgress({ done: 0, total })
+      await new Promise<void>((resolve) => {
+        const interval = setInterval(async () => {
+          try {
+            const pr = await fetch(`/api/grading/progress?jobId=${jobId}`)
+            const pdata = await pr.json()
+            const done = (pdata.processed_papers || 0) + (pdata.failed_papers || 0)
+            setGradingProgress({ done, total })
+            if (pdata.status === 'completed' || pdata.status === 'failed') {
+              clearInterval(interval)
+              resolve()
+            }
+          } catch { /* keep polling */ }
+        }, 2000)
+      })
+
+      setSuccessJobId(jobId)
       setIsGrading(false)
+      setGradingProgress(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Grading failed')
       setIsGrading(false)
+      setGradingProgress(null)
     }
   }
 
@@ -257,13 +281,33 @@ export default function UploadPage() {
         </div>
       </div>
 
-      <button
-        onClick={handleStartGrading}
-        disabled={isGrading || !questionPaper?.uploadId || !sampleAnswer?.uploadId || readyCount === 0}
-        className="w-full bg-gray-900 text-white py-3 rounded-xl font-medium hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        {isGrading ? 'Grading in progress… this may take a few minutes' : `Start Grading${readyCount > 0 ? ` (${readyCount} papers)` : ''}`}
-      </button>
+      <div className="space-y-3">
+        <button
+          onClick={handleStartGrading}
+          disabled={isGrading || !questionPaper?.uploadId || !sampleAnswer?.uploadId || readyCount === 0}
+          className="w-full bg-gray-900 text-white py-3 rounded-xl font-medium hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {isGrading
+            ? gradingProgress
+              ? `Grading ${gradingProgress.done} of ${gradingProgress.total} papers…`
+              : 'Starting…'
+            : `Start Grading${readyCount > 0 ? ` (${readyCount} papers)` : ''}`}
+        </button>
+
+        {isGrading && gradingProgress && (
+          <div className="space-y-1.5">
+            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+              <div
+                className="h-2 bg-gray-900 rounded-full transition-all duration-500"
+                style={{ width: `${gradingProgress.total > 0 ? (gradingProgress.done / gradingProgress.total) * 100 : 0}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-400 text-center">
+              {gradingProgress.done} / {gradingProgress.total} papers graded — do not close this tab
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Success confirmation dialog */}
       {successJobId && (

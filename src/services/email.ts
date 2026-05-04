@@ -112,7 +112,7 @@ export async function sendGradingReportEmail(params: {
   await getTransporter().sendMail({
     from: `"ExamGrade AI" <${process.env.GMAIL_USER}>`,
     to,
-    subject: `✅ Grading Complete: ${job.title} — ${results.length} papers, ${avg}% avg`,
+    subject: `Grading Report: ${job.title} — ${results.length} papers graded, ${avg}% class average`,
     html,
   })
 }

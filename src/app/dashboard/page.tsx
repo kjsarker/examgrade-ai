@@ -1,97 +1,56 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { formatDate } from '@/lib/utils'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: profile }, { data: jobs }] = await Promise.all([
-    supabase.from('users').select('*').eq('id', user!.id).single(),
-    supabase
-      .from('grading_jobs')
-      .select('*')
-      .eq('user_id', user!.id)
-      .order('created_at', { ascending: false })
-      .limit(5),
-  ])
+  const { data: profile } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user!.id)
+    .single()
 
-  const statusColors: Record<string, string> = {
-    pending: 'bg-yellow-50 text-yellow-700',
-    processing: 'bg-blue-50 text-blue-700',
-    completed: 'bg-green-50 text-green-700',
-    failed: 'bg-red-50 text-red-700',
-  }
+  const used = profile?.papers_used || 0
+  const limit = profile?.papers_limit || 50
+  const remaining = limit - used
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">
           Welcome back{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">Here&apos;s your grading overview</p>
+        <p className="text-sm text-gray-500 mt-1">Ready to grade some papers?</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: 'Papers graded', value: profile?.papers_used || 0 },
-          { label: 'Remaining', value: (profile?.papers_limit || 50) - (profile?.papers_used || 0) },
-          { label: 'Total jobs', value: jobs?.length || 0 },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-white rounded-2xl border border-gray-100 p-5">
-            <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
-            <p className="text-sm text-gray-500 mt-0.5">{stat.label}</p>
-          </div>
-        ))}
+      {/* 2-stat row */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <p className="text-4xl font-bold text-gray-900">{used}</p>
+          <p className="text-sm text-gray-500 mt-1">Papers graded</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <p className="text-4xl font-bold text-gray-900">{remaining}</p>
+          <p className="text-sm text-gray-500 mt-1">Remaining</p>
+        </div>
       </div>
 
-      {/* Quick action */}
+      {/* Big Start Grading CTA */}
       <Link
         href="/dashboard/upload"
-        className="flex items-center justify-between bg-gray-900 text-white rounded-2xl p-6 hover:bg-gray-800 transition-colors"
+        className="group flex flex-col items-center justify-center gap-3 bg-gray-900 text-white rounded-2xl p-12 hover:bg-gray-800 transition-colors text-center"
       >
+        <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+          <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+        </div>
         <div>
-          <p className="font-semibold">Start a new grading job</p>
-          <p className="text-sm text-gray-400 mt-0.5">Upload papers and get AI grades in minutes</p>
+          <p className="text-xl font-semibold">Start Grading</p>
+          <p className="text-sm text-gray-400 mt-1">Upload papers and get AI grades in minutes</p>
         </div>
-        <span className="text-2xl">→</span>
       </Link>
-
-      {/* Recent jobs */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900">Recent jobs</h2>
-          <Link href="/dashboard/jobs" className="text-sm text-gray-500 hover:text-gray-900">View all</Link>
-        </div>
-
-        {!jobs || jobs.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-            <p className="text-gray-400 text-sm">No grading jobs yet.</p>
-            <Link href="/dashboard/upload" className="mt-3 inline-block text-sm text-gray-900 font-medium hover:underline">
-              Create your first job →
-            </Link>
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50">
-            {jobs.map((job) => (
-              <Link
-                key={job.id}
-                href={`/dashboard/jobs/${job.id}`}
-                className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
-              >
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{job.title}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{formatDate(job.created_at)} · {job.total_papers} papers</p>
-                </div>
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[job.status]}`}>
-                  {job.status}
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   )
 }
