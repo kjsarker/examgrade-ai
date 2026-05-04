@@ -8,6 +8,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!user) redirect('/login')
 
+  // Enforce email verification
+  if (!user.email_confirmed_at) redirect('/verify-email')
+
   const { data: profile } = await supabase
     .from('users')
     .select('*')

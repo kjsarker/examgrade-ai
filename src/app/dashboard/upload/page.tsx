@@ -231,7 +231,7 @@ export default function UploadPage() {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">New Grading Job</h1>
-        <p className="text-sm text-gray-500 mt-1">Upload exam materials and start AI grading</p>
+        <p className="text-sm text-gray-500 mt-1">Upload exam materials and start grading</p>
       </div>
 
       {error && (
@@ -320,7 +320,7 @@ export default function UploadPage() {
             </div>
             <h2 className="text-xl font-semibold text-gray-900">Grading Complete!</h2>
             <p className="text-sm text-gray-500 leading-relaxed">
-              All papers have been graded by AI. A full report with scores and feedback has been sent to your email.
+              All papers have been graded automatically. A full report with scores and feedback has been sent to your email.
             </p>
             <div className="flex gap-3 pt-1">
               <button

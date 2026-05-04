@@ -33,9 +33,8 @@ export default function SignupPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      // Auto-confirm is on — go straight to dashboard
-      router.push('/dashboard')
-      router.refresh()
+      // Email confirmation required — send user to verify-email page
+      router.push('/verify-email')
     }
   }
 
@@ -47,7 +46,7 @@ export default function SignupPage() {
             <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center">
               <span className="text-white font-bold text-sm">E</span>
             </div>
-            <span className="font-semibold text-gray-900">ExamGrade AI</span>
+            <span className="font-semibold text-gray-900">Speedy ExamGrade</span>
           </Link>
           <h1 className="text-2xl font-semibold text-gray-900">Create your account</h1>
           <p className="text-sm text-gray-500 mt-1">Start with 50 free paper grades</p>

@@ -48,7 +48,7 @@ export default function DashboardNav({ user, profile }: Props) {
           <div className="w-7 h-7 rounded-lg gradient-brand flex items-center justify-center">
             <span className="text-white font-bold text-xs">E</span>
           </div>
-          <span className="font-semibold text-gray-900 text-sm">ExamGrade AI</span>
+          <span className="font-semibold text-gray-900 text-sm">Speedy ExamGrade</span>
         </Link>
       </div>
 

@@ -38,7 +38,7 @@ export default function LoginPage() {
             <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center">
               <span className="text-white font-bold text-sm">E</span>
             </div>
-            <span className="font-semibold text-gray-900">ExamGrade AI</span>
+            <span className="font-semibold text-gray-900">Speedy ExamGrade</span>
           </Link>
           <h1 className="text-2xl font-semibold text-gray-900">Welcome back</h1>
           <p className="text-sm text-gray-500 mt-1">Sign in to your account</p>

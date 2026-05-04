@@ -35,7 +35,7 @@ export async function generatePDFReport(
 
   // Cover page
   let page = addPage()
-  drawText(page, 'ExamGrade AI', 50, 780, 24, true, rgb(0.1, 0.1, 0.8))
+  drawText(page, 'Speedy ExamGrade', 50, 780, 24, true, rgb(0.1, 0.1, 0.8))
   drawText(page, 'Grading Report', 50, 750, 18, true)
   drawText(page, `Job: ${job.title}`, 50, 710, 12)
   drawText(page, `Date: ${new Date(job.created_at).toLocaleDateString()}`, 50, 690, 12)

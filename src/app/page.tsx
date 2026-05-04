@@ -9,7 +9,7 @@ export default function Home() {
           <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center">
             <span className="text-white font-bold text-sm">E</span>
           </div>
-          <span className="font-semibold text-gray-900">ExamGrade AI</span>
+          <span className="font-semibold text-gray-900">Speedy ExamGrade</span>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/login" className="text-sm text-gray-600 hover:text-gray-900 px-4 py-2">
@@ -25,13 +25,13 @@ export default function Home() {
       <section className="flex flex-col items-center text-center px-6 pt-24 pb-20">
         <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 text-xs font-medium px-3 py-1.5 rounded-full mb-6">
           <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-          Powered by Claude AI
+          Powered by Speedy ExamGrade
         </div>
         <h1 className="text-5xl font-semibold text-gray-900 max-w-2xl leading-tight tracking-tight mb-6">
           Grade exam papers in minutes, not days
         </h1>
         <p className="text-lg text-gray-500 max-w-xl mb-10">
-          Upload student scripts, your rubric, and let AI grade consistently and fairly.
+          Upload student scripts, your rubric, and get consistent, fair grading automatically.
           Get structured results, question-by-question feedback, and exportable reports.
         </p>
         <div className="flex items-center gap-3">
@@ -47,11 +47,11 @@ export default function Home() {
       {/* Feature Grid */}
       <section className="max-w-5xl mx-auto px-6 pb-24 grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { icon: "⚡", title: "Batch Grading", desc: "Upload 500 papers at once. AI grades each one consistently against your rubric." },
+          { icon: "⚡", title: "Batch Grading", desc: "Upload 500 papers at once. Grades each one consistently against your rubric." },
           { icon: "🎚️", title: "3 Difficulty Modes", desc: "Easy, Medium, or Hard grading. Customize strictness to match your academic standards." },
           { icon: "📊", title: "Structured Results", desc: "Question-by-question breakdown with scores, feedback, CSV & PDF reports." },
           { icon: "✉️", title: "Email Delivery", desc: "Grading results sent directly to your inbox with attached reports." },
-          { icon: "🧠", title: "Custom Prompts", desc: "Edit the AI grading instructions to match your exact evaluation style." },
+          { icon: "🧠", title: "Custom Prompts", desc: "Edit the grading instructions to match your exact evaluation style." },
           { icon: "🔒", title: "Secure & Private", desc: "All files encrypted and stored securely. Only you can access your data." },
         ].map((f) => (
           <div key={f.title} className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
@@ -87,7 +87,7 @@ export default function Home() {
       </section>
 
       <footer className="text-center py-8 text-sm text-gray-400 border-t border-gray-100">
-        © {new Date().getFullYear()} ExamGrade AI. Built for professors.
+        © {new Date().getFullYear()} Speedy ExamGrade. Built for professors.
       </footer>
     </div>
   );

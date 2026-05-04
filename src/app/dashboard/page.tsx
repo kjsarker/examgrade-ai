@@ -60,7 +60,7 @@ export default async function DashboardPage() {
         </div>
         <div>
           <p className="text-xl font-semibold">Start Grading</p>
-          <p className="text-sm text-gray-400 mt-1">Upload papers and get AI grades in minutes</p>
+          <p className="text-sm text-gray-400 mt-1">Upload papers and get results in minutes</p>
         </div>
       </Link>
 

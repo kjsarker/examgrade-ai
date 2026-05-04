@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "ExamGrade AI — Automated Exam Grading for Professors",
-  description: "Grade student exam papers automatically with AI. Fast, consistent, and fair.",
+  title: "Speedy ExamGrade — Fast Exam Grading for Professors",
+  description: "Grade student exam papers automatically. Fast, consistent, and fair.",
 };
 
 export default function RootLayout({

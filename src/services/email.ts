@@ -101,7 +101,7 @@ export async function sendGradingReportEmail(params: {
 
   <!-- Footer -->
   <tr><td style="padding:16px 32px;border-top:1px solid #f0f0f0;">
-    <p style="margin:0;font-size:12px;color:#bbb;">ExamGrade AI</p>
+    <p style="margin:0;font-size:12px;color:#bbb;">Speedy ExamGrade</p>
   </td></tr>
 
 </table>
@@ -110,7 +110,7 @@ export async function sendGradingReportEmail(params: {
 </body></html>`
 
   await getTransporter().sendMail({
-    from: `"ExamGrade AI" <${process.env.GMAIL_USER}>`,
+    from: `"Speedy ExamGrade" <${process.env.GMAIL_USER}>`,
     to,
     subject: `Grading Report: ${job.title} — ${results.length} papers graded, ${avg}% class average`,
     html,

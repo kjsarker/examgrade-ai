@@ -82,7 +82,7 @@ export default function SettingsPage() {
       <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
         <div>
           <h2 className="font-semibold text-gray-900">Grading Prompt</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Customize the AI instructions per difficulty level</p>
+          <p className="text-sm text-gray-500 mt-0.5">Customize the grading instructions per difficulty level</p>
         </div>
 
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
