@@ -8,37 +8,26 @@ function getClient() {
   return _client
 }
 
-const PDF_B64_RE = /^__PDF_BASE64__([\s\S]+)__END_PDF_BASE64__$/
+type ContentPart = OpenAI.Chat.ChatCompletionContentPart
 
-function isPdfBase64(s: string) {
-  return PDF_B64_RE.test(s.trim())
-}
-
-function extractBase64(s: string) {
-  return s.trim().match(PDF_B64_RE)?.[1] ?? ''
-}
-
-// Build a message part: plain text or inline PDF file for GPT-4o vision
-function contentPart(label: string, value: string): OpenAI.Chat.ChatCompletionContentPart[] {
-  if (isPdfBase64(value)) {
+// Build content parts for a document: text or file reference for scanned PDFs
+function docParts(label: string, text: string, fileId?: string): ContentPart[] {
+  if (fileId) {
     return [
-      { type: 'text', text: `${label}:` } as OpenAI.Chat.ChatCompletionContentPart,
-      {
-        type: 'file',
-        file: {
-          filename: `${label.toLowerCase().replace(/\s+/g, '_')}.pdf`,
-          file_data: `data:application/pdf;base64,${extractBase64(value)}`,
-        },
-      } as unknown as OpenAI.Chat.ChatCompletionContentPart,
+      { type: 'text', text: `${label}:` },
+      { type: 'file', file: { file_id: fileId } } as unknown as ContentPart,
     ]
   }
-  return [{ type: 'text', text: `${label}:\n${value}` }]
+  return [{ type: 'text', text: `${label}:\n${text}` }]
 }
 
 export async function gradeStudentPaper(params: {
   questionPaper: string
+  questionPaperFileId?: string
   sampleAnswer: string
+  sampleAnswerFileId?: string
   studentScript: string
+  studentScriptFileId?: string
   studentName: string
   studentId?: string
   difficultyMode: DifficultyMode
@@ -46,34 +35,22 @@ export async function gradeStudentPaper(params: {
   retries?: number
 }): Promise<AIGradingResponse> {
   const {
-    questionPaper, sampleAnswer, studentScript,
+    questionPaper, questionPaperFileId,
+    sampleAnswer, sampleAnswerFileId,
+    studentScript, studentScriptFileId,
     studentName, studentId, difficultyMode, customPromptOverride,
     retries = 3,
   } = params
 
   const systemPrompt = buildGradingPrompt(difficultyMode, customPromptOverride)
+  const hasFiles = !!(questionPaperFileId || sampleAnswerFileId || studentScriptFileId)
 
-  const hasVision = [questionPaper, sampleAnswer, studentScript].some(isPdfBase64)
-
-  // Build user message content
-  const userContent: OpenAI.Chat.ChatCompletionContentPart[] = hasVision
-    ? [
-        { type: 'text', text: `Student: ${studentName}${studentId ? ` (ID: ${studentId})` : ''}` },
-        ...contentPart('QUESTION PAPER', questionPaper),
-        ...contentPart('SAMPLE ANSWER / MARKING RUBRIC', sampleAnswer),
-        ...contentPart('STUDENT SUBMISSION', studentScript),
-      ]
-    : [
-        {
-          type: 'text',
-          text: [
-            `Student: ${studentName}${studentId ? ` (ID: ${studentId})` : ''}`,
-            `\nQUESTION PAPER:\n${questionPaper}`,
-            `\nSAMPLE ANSWER / MARKING RUBRIC:\n${sampleAnswer}`,
-            `\nSTUDENT SUBMISSION:\n${studentScript}`,
-          ].join('\n'),
-        },
-      ]
+  const userContent: ContentPart[] = [
+    { type: 'text', text: `Student: ${studentName}${studentId ? ` (ID: ${studentId})` : ''}` },
+    ...docParts('QUESTION PAPER', questionPaper, questionPaperFileId),
+    ...docParts('SAMPLE ANSWER / MARKING RUBRIC', sampleAnswer, sampleAnswerFileId),
+    ...docParts('STUDENT SUBMISSION', studentScript, studentScriptFileId),
+  ]
 
   let lastError: Error | null = null
 
@@ -83,7 +60,12 @@ export async function gradeStudentPaper(params: {
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: hasVision ? userContent : (userContent[0] as OpenAI.Chat.ChatCompletionContentPartText).text },
+          {
+            role: 'user',
+            content: hasFiles
+              ? userContent
+              : userContent.map((p) => (p as { text: string }).text).join('\n'),
+          },
         ],
         max_tokens: 4096,
         response_format: { type: 'json_object' },
