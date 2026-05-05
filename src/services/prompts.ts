@@ -56,10 +56,14 @@ export function buildGradingPrompt(
   difficultyMode: DifficultyMode,
   customPromptOverride?: string
 ): string {
+  const base = `${BASE_GRADING_PROMPT}\n${DIFFICULTY_PROMPTS[difficultyMode]}`
   if (customPromptOverride) {
-    return customPromptOverride
+    return `${base}
+
+ADDITIONAL INSTRUCTIONS FROM PROFESSOR (these take priority and override the grading mode above where they conflict):
+${customPromptOverride}`
   }
-  return `${BASE_GRADING_PROMPT}\n${DIFFICULTY_PROMPTS[difficultyMode]}`
+  return base
 }
 
 export function buildGradingUserMessage(
