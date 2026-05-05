@@ -17,7 +17,7 @@ export default async function DashboardPage() {
   ])
 
   const used = profile?.papers_used || 0
-  const limit = profile?.papers_limit || 50
+  const limit = profile?.papers_limit || 5
   const remaining = limit - used
 
   const statusConfig: Record<string, { label: string; dot: string; text: string }> = {

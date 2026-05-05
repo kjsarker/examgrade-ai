@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
           plan: 'free',
           subscription_status: 'canceled',
           stripe_subscription_id: null,
-          papers_limit: 50,
+          papers_limit: 5,
           papers_used: 0,
         }).eq('id', userId)
       }

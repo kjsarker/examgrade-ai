@@ -15,7 +15,7 @@ Here's what it does:
 - Download results or receive a professional summary email
 - Works with any subject or exam format
 
-Your first 50 papers are free with Speedy ExamGrade. No card required.
+Your first 5 papers are free with Speedy ExamGrade. No card required.
 
 Try it now: ${process.env.NEXT_PUBLIC_APP_URL}
 
@@ -33,7 +33,7 @@ Stop spending hours grading papers. Speedy ExamGrade does it in minutes using AI
 
 Upload papers → Get graded results in your inbox → Download or review online.
 
-Free for your first 50 papers: ${process.env.NEXT_PUBLIC_APP_URL}
+Free for your first 5 papers: ${process.env.NEXT_PUBLIC_APP_URL}
 
 Let me know if you have questions.
 

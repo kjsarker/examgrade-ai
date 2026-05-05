@@ -89,9 +89,9 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
   free: {
     name: 'Trial',
     price: 0,
-    papers_per_month: 50,
+    papers_per_month: 5,
     features: [
-      '50 papers lifetime',
+      '5 papers lifetime',
       'Basic grading speed',
       'Standard AI accuracy',
       'CSV export only',

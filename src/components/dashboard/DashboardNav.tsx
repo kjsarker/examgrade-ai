@@ -37,7 +37,7 @@ export default function DashboardNav({ user, profile }: Props) {
 
   const plan = profile?.plan || 'free'
   const used = profile?.papers_used || 0
-  const limit = profile?.papers_limit || 50
+  const limit = profile?.papers_limit || 5
   const pct = Math.min((used / limit) * 100, 100)
 
   return (

@@ -349,7 +349,7 @@ export default function UploadPage() {
             </div>
             <h2 className="text-xl font-semibold text-gray-900">Free Plan Limit Reached</h2>
             <p className="text-sm text-gray-500">
-              You have used all 50 free papers included in your trial. Upgrade to Pro or Premium to grade more papers.
+              You have used all 5 free papers included in your trial. Upgrade to Pro or Premium to grade more papers.
             </p>
             <div className="flex gap-3 pt-2">
               <button

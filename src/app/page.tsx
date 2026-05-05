@@ -70,7 +70,7 @@ export default function Home() {
         </div>
         <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { name: "Trial", price: "Free", papers: "50 papers lifetime", cta: "Get started", href: "/signup", highlight: false },
+            { name: "Trial", price: "Free", papers: "5 papers lifetime", cta: "Get started", href: "/signup", highlight: false },
             { name: "Pro", price: "$49.99/mo", papers: "200 papers/month", cta: "Start Pro", href: "/signup", highlight: true },
             { name: "Premium", price: "$99.99/mo", papers: "500 papers/month", cta: "Start Premium", href: "/signup", highlight: false },
           ].map((p) => (
