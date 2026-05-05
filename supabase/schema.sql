@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   avatar_url TEXT,
   plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro', 'premium')),
   papers_used INTEGER NOT NULL DEFAULT 0,
-  papers_limit INTEGER NOT NULL DEFAULT 50,
+  papers_limit INTEGER NOT NULL DEFAULT 5,
   stripe_customer_id TEXT,
   stripe_subscription_id TEXT,
   subscription_status TEXT,
